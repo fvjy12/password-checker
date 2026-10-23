@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-# Pwned Checker — проверка паролей по базе утечек HaveIBeenPwned
-#
-# Пароль никогда не покидает компьютер: наружу уходят только первые
-# 5 символов SHA-1 хэша (схема k-anonymity). Зависимостей нет —
-# только стандартная библиотека Python.
-# v1.0.0
 
 import getpass
 import hashlib
@@ -19,14 +13,12 @@ import urllib.request
 API_URL = "https://api.pwnedpasswords.com/range/"
 HEADERS = {
     "User-Agent": "PwnedChecker-1.0 (github.com/fvjy12/password-checker)",
-    # сервер дополняет ответ случайными суффиксами — по размеру ответа
-    # нельзя понять, найден пароль в базе или нет
+
     "Add-Padding": "true",
 }
 
 AMBIGUOUS = "l1IO0|`'\""
 
-# модели атак: (название, скорость подбора паролей в секунду)
 ATTACK_MODELS = [
     ("онлайн, ограничение (100 попыток/час)", 100 / 3600),
     ("онлайн, без ограничений (10 попыток/сек)", 10),
@@ -35,9 +27,6 @@ ATTACK_MODELS = [
 ]
 
 
-# ============================================================
-#  Цвета (ANSI)
-# ============================================================
 class C:
     RESET = "\033[0m"
     BOLD = "\033[1m"
@@ -50,12 +39,9 @@ class C:
 
 def enable_colors():
     if os.name == "nt":
-        os.system("")  # включает обработку ANSI-кодов в консоли Windows
+        os.system("")
 
 
-# ============================================================
-#  HaveIBeenPwned
-# ============================================================
 def query_pwned_count(password):
     """Вернуть, сколько раз пароль встречался в утечках.
 
@@ -79,10 +65,6 @@ def query_pwned_count(password):
             return int(count)
     return 0
 
-
-# ============================================================
-#  Энтропия и время подбора
-# ============================================================
 CHAR_CLASSES = [
     (string.ascii_lowercase, 26),
     (string.ascii_uppercase, 26),
@@ -95,7 +77,7 @@ def alphabet_size(password):
     """Оценка размера алфавита, которым мог пользоваться автор пароля."""
     size = sum(n for chars, n in CHAR_CLASSES if any(c in chars for c in password))
     if any(ord(c) > 127 for c in password):
-        size += 100  # не-ASCII: кириллица, эмодзи и т.д.
+        size += 100
     return max(size, 1)
 
 
@@ -149,9 +131,6 @@ def verdict(count, bits):
     return f"{C.GREEN}✅ СТОЙКИЙ ({bits} бит){C.RESET}"
 
 
-# ============================================================
-#  Генератор паролей
-# ============================================================
 def generate_password(length=16, upper=True, digits=True, symbols=True, no_ambiguous=False):
     pools = [string.ascii_lowercase]
     if upper:
@@ -167,17 +146,13 @@ def generate_password(length=16, upper=True, digits=True, symbols=True, no_ambig
         raise ValueError("не выбран ни один набор символов")
 
     alphabet = "".join(pools)
-    # secrets.choice — криптографически стойкий источник случайности
-    # (не random, который предсказуем)
+
     while True:
         pwd = "".join(secrets.choice(alphabet) for _ in range(length))
         if all(any(c in p for c in pwd) for p in pools):
             return pwd
 
 
-# ============================================================
-#  Интерфейс
-# ============================================================
 def ask(prompt, default=""):
     line = input(prompt).strip()
     return line if line else default
